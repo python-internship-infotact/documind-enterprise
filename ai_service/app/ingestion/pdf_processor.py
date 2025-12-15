@@ -1,0 +1,112 @@
+from unstructured.partition.pdf import partition_pdf
+from langchain_core.documents import Document
+import os
+from typing import List, Dict, Optional
+import uuid
+from datetime import datetime
+import logging
+from ..models import DocumentMetadata, ProcessedDocument
+
+logger = logging.getLogger(__name__)
+
+class PDFProcessor:
+    def __init__(self):
+        self.processed_docs = []
+        
+    def extract_with_metadata(self, file_path: str, filename: str = None) -> List[ProcessedDocument]:
+        """
+        Extract text from PDF with comprehensive metadata including page numbers
+        """
+        try:
+            if not filename:
+                filename = os.path.basename(file_path)
+                
+            logger.info(f"Processing PDF: {filename}")
+            
+            # Use unstructured to partition PDF with page numbers
+            elements = partition_pdf(
+                filename=file_path,
+                strategy="hi_res",  # High resolution for better accuracy
+                infer_table_structure=True,
+                include_page_breaks=True,
+                extract_images_in_pdf=False  # Skip images for now
+            )
+            
+            processed_docs = []
+            current_page = 1
+            
+            # Group elements by page and extract text
+            page_content = {}
+            
+            for element in elements:
+                # Get page number from metadata
+                page_num = getattr(element.metadata, 'page_number', current_page) if hasattr(element, 'metadata') else current_page
+                
+                if page_num not in page_content:
+                    page_content[page_num] = []
+                    
+                # Extract text content
+                text = str(element).strip()
+                if text:
+                    page_content[page_num].append(text)
+            
+            # Create documents for each page
+            total_pages = max(page_content.keys()) if page_content else 1
+            
+            for page_num, content_list in page_content.items():
+                if content_list:  # Only create document if there's content
+                    content = "\n".join(content_list)
+                    
+                    # Create metadata
+                    metadata = DocumentMetadata(
+                        source_file=filename,
+                        page_number=page_num,
+                        chunk_id=str(uuid.uuid4()),
+                        document_title=self._extract_title(content_list[0] if content_list else ""),
+                        created_at=datetime.now().isoformat(),
+                        file_size=os.path.getsize(file_path) if os.path.exists(file_path) else None,
+                        total_pages=total_pages
+                    )
+                    
+                    processed_doc = ProcessedDocument(
+                        content=content,
+                        metadata=metadata
+                    )
+                    
+                    processed_docs.append(processed_doc)
+            
+            logger.info(f"Successfully processed {len(processed_docs)} pages from {filename}")
+            return processed_docs
+            
+        except Exception as e:
+            logger.error(f"Error processing PDF {filename}: {str(e)}")
+            raise Exception(f"Failed to process PDF: {str(e)}")
+    
+    def _extract_title(self, first_line: str) -> Optional[str]:
+        """
+        Extract document title from first line or header
+        """
+        if len(first_line) > 100:  # Too long to be a title
+            return None
+            
+        # Simple heuristics for title detection
+        if first_line.isupper() or first_line.istitle():
+            return first_line.strip()
+            
+        return None
+    
+    def validate_pdf(self, file_path: str, max_size_mb: int = 50) -> bool:
+        """
+        Validate PDF file before processing
+        """
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"File not found: {file_path}")
+            
+        if not file_path.lower().endswith('.pdf'):
+            raise ValueError("File must be a PDF")
+            
+        file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
+        if file_size_mb > max_size_mb:
+            raise ValueError(f"File size ({file_size_mb:.1f}MB) exceeds limit ({max_size_mb}MB)")
+            
+        return True
