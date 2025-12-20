@@ -32,3 +32,48 @@ class ProcessingStatus(BaseModel):
     message: str
     chunks_processed: int = 0
     total_chunks: int = 0
+
+# Chat-related models for Week 2
+class ChatRequest(BaseModel):
+    question: str
+    session_id: Optional[str] = "default"
+    include_sources: bool = True
+
+class ChatSource(BaseModel):
+    source_file: str
+    page_number: int
+    score: float
+    content_preview: str
+
+class ChatResponse(BaseModel):
+    answer: str
+    sources: List[ChatSource] = []
+    confidence: str  # "high", "medium", "low", "n/a"
+    retrieval_quality: float
+    processing_time: float
+    session_id: str
+    is_followup: bool = False
+    status: str  # "success", "refused", "error"
+    refusal_reason: Optional[str] = None
+    error_message: Optional[str] = None
+
+class ConversationHistoryRequest(BaseModel):
+    session_id: str
+    max_turns: Optional[int] = 10
+
+class ConversationTurn(BaseModel):
+    timestamp: str
+    user_query: str
+    ai_response: str
+    sources_count: int
+    turn_id: int
+
+class ConversationHistoryResponse(BaseModel):
+    session_id: str
+    turns: List[ConversationTurn]
+    total_turns: int
+
+class SystemStatsResponse(BaseModel):
+    vector_database: Dict[str, Any]
+    conversation_memory: Dict[str, Any]
+    system_health: Dict[str, Any]

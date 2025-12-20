@@ -18,3 +18,5 @@ pydantic-settings
 pytest
 httpx
 requests
+numpy
+scikit-learn
