@@ -4,8 +4,11 @@ langchain
 langchain-openai
 langchain-pinecone
 langchain-text-splitters
+langchain-huggingface
 pinecone-client
 openai
+groq
+sentence-transformers
 unstructured[pdf]
 pypdf
 tiktoken
@@ -14,3 +17,4 @@ python-dotenv
 pydantic-settings
 pytest
 httpx
+requests

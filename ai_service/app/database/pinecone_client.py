@@ -1,5 +1,6 @@
 from pinecone import Pinecone, ServerlessSpec
 from langchain_openai import OpenAIEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_pinecone import PineconeVectorStore
 from typing import List, Dict, Optional, Any
 import logging
@@ -16,10 +17,24 @@ class PineconeManager:
             config = settings
             
         self.config = config
-        self.embeddings = OpenAIEmbeddings(
-            openai_api_key=config.openai_api_key,
-            model="text-embedding-ada-002"
-        )
+        
+        # Initialize embeddings based on provider
+        if config.embedding_provider == "openai":
+            self.embeddings = OpenAIEmbeddings(
+                openai_api_key=config.openai_api_key,
+                model="text-embedding-ada-002"
+            )
+            self.embedding_dimension = 1536
+        else:  # Default to HuggingFace
+            self.embeddings = HuggingFaceEmbeddings(
+                model_name=config.embedding_model,
+                model_kwargs={'device': 'cpu'},
+                encode_kwargs={'normalize_embeddings': True}
+            )
+            # Get dimension from the model (384 for all-MiniLM-L6-v2)
+            self.embedding_dimension = 384
+            
+        logger.info(f"Using {config.embedding_provider} embeddings with dimension {self.embedding_dimension}")
         
         # Initialize Pinecone
         try:
@@ -32,7 +47,7 @@ class PineconeManager:
                 logger.info(f"Creating Pinecone index: {config.pinecone_index_name}")
                 self.pc.create_index(
                     name=config.pinecone_index_name,
-                    dimension=1536,  # OpenAI embedding dimension
+                    dimension=self.embedding_dimension,  # Use dynamic dimension
                     metric="cosine",
                     spec=ServerlessSpec(
                         cloud="aws",
@@ -124,18 +139,21 @@ class PineconeManager:
         """
         Prepare metadata for Pinecone storage (must be JSON serializable)
         """
-        return {
-            "source_file": metadata.source_file,
-            "page_number": metadata.page_number,
-            "document_title": metadata.document_title or "",
-            "section_header": metadata.section_header or "",
-            "created_at": metadata.created_at,
-            "chunk_index": getattr(metadata, 'chunk_index', 0),
-            "total_chunks": getattr(metadata, 'total_chunks', 1),
-            "parent_chunk_id": getattr(metadata, 'parent_chunk_id', ""),
-            "file_size": metadata.file_size or 0,
-            "total_pages": metadata.total_pages or 1
+        # Handle all optional fields safely
+        prepared = {
+            "source_file": str(metadata.source_file),
+            "page_number": int(metadata.page_number),
+            "document_title": str(metadata.document_title) if metadata.document_title else "",
+            "section_header": str(metadata.section_header) if metadata.section_header else "",
+            "created_at": str(metadata.created_at),
+            "chunk_index": int(metadata.chunk_index) if metadata.chunk_index is not None else 0,
+            "total_chunks": int(metadata.total_chunks) if metadata.total_chunks is not None else 1,
+            "parent_chunk_id": str(metadata.parent_chunk_id) if metadata.parent_chunk_id else "",
+            "file_size": int(metadata.file_size) if metadata.file_size is not None else 0,
+            "total_pages": int(metadata.total_pages) if metadata.total_pages is not None else 1
         }
+        
+        return prepared
     
     def search_similar(self, query: str, top_k: int = 5, 
                       filter_dict: Optional[Dict] = None) -> List[Dict]:
