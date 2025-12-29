@@ -38,6 +38,7 @@ class ChatRequest(BaseModel):
     question: str
     session_id: Optional[str] = "default"
     include_sources: bool = True
+    stream: bool = False  # New field for streaming support
 
 class ChatSource(BaseModel):
     source_file: str
@@ -77,3 +78,23 @@ class SystemStatsResponse(BaseModel):
     vector_database: Dict[str, Any]
     conversation_memory: Dict[str, Any]
     system_health: Dict[str, Any]
+
+# Week 3 Streaming Models
+class StreamingChatRequest(BaseModel):
+    question: str
+    session_id: Optional[str] = "default"
+    include_sources: bool = True
+
+class StreamingChunk(BaseModel):
+    type: str  # "token", "sources", "metadata", "error", "done"
+    content: Optional[str] = None
+    sources: Optional[List[ChatSource]] = None
+    metadata: Optional[Dict[str, Any]] = None
+    error: Optional[str] = None
+    
+class LatencyMetrics(BaseModel):
+    time_to_first_token: float
+    total_processing_time: float
+    retrieval_time: float
+    generation_time: float
+    tokens_per_second: Optional[float] = None

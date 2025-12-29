@@ -1,5 +1,5 @@
 fastapi
-uvicorn
+uvicorn[standard]
 langchain
 langchain-openai
 langchain-pinecone
@@ -20,3 +20,5 @@ httpx
 requests
 numpy
 scikit-learn
+aiohttp
+aiofiles

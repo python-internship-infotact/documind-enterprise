@@ -1,17 +1,19 @@
 from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 import os
 import tempfile
 import logging
 from typing import Dict, Any
 import asyncio
+import json
 
 from app.ingestion.pipeline import DocumentIngestionPipeline
 from app.models import (
     DocumentUploadResponse, ProcessingStatus, 
     ChatRequest, ChatResponse, ConversationHistoryRequest, 
-    ConversationHistoryResponse, SystemStatsResponse
+    ConversationHistoryResponse, SystemStatsResponse,
+    StreamingChatRequest, StreamingChunk, LatencyMetrics
 )
 from app.rag.engine import get_rag_engine
 
@@ -22,8 +24,8 @@ logger = logging.getLogger(__name__)
 # Initialize FastAPI app
 app = FastAPI(
     title="DocuMind Enterprise API",
-    description="Enterprise Document Intelligence and RAG System with Chat Capabilities",
-    version="2.0.0"
+    description="Enterprise Document Intelligence and RAG System with Chat Capabilities and Streaming",
+    version="3.0.0"
 )
 
 # Add CORS middleware
@@ -67,14 +69,16 @@ async def root():
     """API status endpoint"""
     return {
         "message": "DocuMind Enterprise API",
-        "version": "2.0.0",
+        "version": "3.0.0",
         "status": "operational",
         "features": [
             "Document ingestion and processing",
             "Semantic search and retrieval",
             "AI-powered chat with hallucination prevention",
             "History-aware conversations",
-            "Citation-based responses"
+            "Citation-based responses",
+            "Real-time streaming responses",
+            "Sub-second Time to First Token (TTFT)"
         ]
     }
 
@@ -161,12 +165,20 @@ async def search_documents(query: str, top_k: int = 5, source_filter: str = None
         logger.error(f"Document search failed: {e}")
         raise HTTPException(status_code=500, detail=f"Search failed: {str(e)}")
 
-# Chat Endpoints (Week 2)
+# Chat Endpoints (Week 2 + Week 3 Streaming)
 @app.post("/chat", response_model=ChatResponse)
 async def chat_query(request: ChatRequest):
     """Process a chat query with RAG and safety checks"""
     try:
         rag_engine = get_rag_engine()
+        
+        # Check if streaming is requested
+        if request.stream:
+            # Redirect to streaming endpoint
+            raise HTTPException(
+                status_code=400, 
+                detail="Use /chat/stream endpoint for streaming responses"
+            )
         
         result = await rag_engine.query(
             question=request.question,
@@ -200,6 +212,44 @@ async def chat_query(request: ChatRequest):
     except Exception as e:
         logger.error(f"Chat query failed: {e}")
         raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")
+
+@app.post("/chat/stream")
+async def chat_stream(request: StreamingChatRequest):
+    """Process a chat query with streaming response for real-time UX"""
+    
+    async def generate_stream():
+        """Generate streaming response chunks"""
+        try:
+            rag_engine = get_rag_engine()
+            
+            async for chunk in rag_engine.query_stream(
+                question=request.question,
+                session_id=request.session_id
+            ):
+                # Format chunk for SSE
+                chunk_data = json.dumps(chunk, ensure_ascii=False)
+                yield f"data: {chunk_data}\n\n"
+            
+        except Exception as e:
+            logger.error(f"Streaming chat failed: {e}")
+            error_chunk = {
+                "type": "error",
+                "error": f"Streaming failed: {str(e)}"
+            }
+            yield f"data: {json.dumps(error_chunk)}\n\n"
+    
+    return StreamingResponse(
+        generate_stream(),
+        media_type="text/plain",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "Content-Type": "text/event-stream",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Headers": "*",
+            "Access-Control-Allow-Methods": "*"
+        }
+    )
 
 @app.get("/chat/history", response_model=ConversationHistoryResponse)
 async def get_conversation_history(session_id: str, max_turns: int = 10):

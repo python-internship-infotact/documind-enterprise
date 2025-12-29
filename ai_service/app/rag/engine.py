@@ -149,6 +149,160 @@ class DocuMindRAGEngine:
             logger.error(f"Error processing query '{question}': {str(e)}")
             return self._create_error_response(question, str(e))
     
+    async def query_stream(self, question: str, session_id: str = "default"):
+        """Process a query with streaming response"""
+        start_time = datetime.now()
+        retrieval_start = None
+        generation_start = None
+        first_token_time = None
+        
+        try:
+            # Step 1: Query classification and safety check
+            query_analysis = self.query_classifier.classify_query(question)
+            
+            if query_analysis["is_external"]:
+                logger.warning(f"External knowledge query detected: {question}")
+                yield {
+                    "type": "error",
+                    "error": REFUSAL_TEMPLATES["external_knowledge"],
+                    "refusal_reason": "external_knowledge_detected"
+                }
+                return
+            
+            # Step 2: Process query with conversation history
+            processed_query = self.history_processor.process_query(question, session_id)
+            search_query = processed_query["search_query"]
+            
+            logger.info(f"Processing streaming query: {question}")
+            if processed_query["is_followup"]:
+                logger.info(f"Follow-up detected, reformulated to: {search_query}")
+            
+            # Step 3: Retrieve relevant documents
+            retrieval_start = datetime.now()
+            retrieval_results = self.retriever.retrieve(search_query, top_k=10)
+            
+            if not retrieval_results:
+                logger.warning(f"No documents retrieved for query: {question}")
+                yield {
+                    "type": "error",
+                    "error": REFUSAL_TEMPLATES["insufficient_context"],
+                    "refusal_reason": "no_documents_found"
+                }
+                return
+            
+            # Step 4: Rank and filter context
+            ranked_results = self.context_ranker.rank_and_filter(retrieval_results, search_query)
+            
+            # Step 5: Analyze retrieval quality
+            retrieval_analysis = self.retrieval_analyzer.analyze_retrieval(search_query, ranked_results)
+            retrieval_time = (datetime.now() - retrieval_start).total_seconds()
+            
+            if retrieval_analysis["confidence"] == "low":
+                logger.warning(f"Low confidence retrieval for query: {question}")
+                yield {
+                    "type": "error",
+                    "error": REFUSAL_TEMPLATES["insufficient_context"],
+                    "refusal_reason": "low_confidence_retrieval"
+                }
+                return
+            
+            # Prepare sources for streaming
+            sources_used = [
+                {
+                    "source_file": r.metadata.get("source_file", ""),
+                    "page_number": r.metadata.get("page_number", 0),
+                    "score": r.score,
+                    "content_preview": r.content[:100] + "..." if len(r.content) > 100 else r.content
+                }
+                for r in ranked_results
+            ]
+            
+            # Send sources first
+            yield {
+                "type": "sources",
+                "sources": sources_used,
+                "metadata": {
+                    "confidence": retrieval_analysis["confidence"],
+                    "retrieval_quality": retrieval_analysis["quality_score"],
+                    "retrieval_time": retrieval_time
+                }
+            }
+            
+            # Step 6: Generate streaming response
+            generation_start = datetime.now()
+            full_response = ""
+            token_count = 0
+            
+            async for chunk in self._generate_streaming_response(
+                question, search_query, ranked_results, processed_query["context"]
+            ):
+                if chunk["type"] == "token":
+                    if first_token_time is None:
+                        first_token_time = datetime.now()
+                    
+                    full_response += chunk["content"]
+                    token_count += 1
+                    yield chunk
+                elif chunk["type"] == "error":
+                    yield chunk
+                    return
+            
+            # Step 7: Safety validation
+            is_safe, violations = self.hallucination_guard.is_safe_response(
+                full_response, 
+                [{"metadata": r.metadata} for r in ranked_results]
+            )
+            
+            if not is_safe:
+                logger.error(f"Unsafe response detected with {len(violations)} violations")
+                yield {
+                    "type": "error",
+                    "error": REFUSAL_TEMPLATES["insufficient_context"],
+                    "refusal_reason": "safety_violation"
+                }
+                return
+            
+            # Step 8: Store conversation turn
+            self.memory.add_turn(
+                session_id=session_id,
+                user_query=question,
+                ai_response=full_response,
+                sources_used=sources_used
+            )
+            
+            # Step 9: Send final metadata
+            end_time = datetime.now()
+            total_time = (end_time - start_time).total_seconds()
+            generation_time = (end_time - generation_start).total_seconds()
+            ttft = (first_token_time - start_time).total_seconds() if first_token_time else 0
+            
+            tokens_per_second = token_count / generation_time if generation_time > 0 else 0
+            
+            yield {
+                "type": "metadata",
+                "metadata": {
+                    "session_id": session_id,
+                    "is_followup": processed_query["is_followup"],
+                    "status": "success",
+                    "latency_metrics": {
+                        "time_to_first_token": ttft,
+                        "total_processing_time": total_time,
+                        "retrieval_time": retrieval_time,
+                        "generation_time": generation_time,
+                        "tokens_per_second": tokens_per_second
+                    }
+                }
+            }
+            
+            yield {"type": "done"}
+            
+        except Exception as e:
+            logger.error(f"Error in streaming query '{question}': {str(e)}")
+            yield {
+                "type": "error",
+                "error": f"An error occurred: {str(e)}"
+            }
+    
     async def _generate_response(self, original_query: str, search_query: str, 
                                results: List, conversation_context: Dict) -> Dict[str, str]:
         """Generate AI response using Groq"""
@@ -214,6 +368,70 @@ Please provide a helpful answer based ONLY on the context documents provided. In
         except Exception as e:
             logger.error(f"Error generating response: {e}")
             raise Exception(f"Failed to generate response: {str(e)}")
+    
+    async def _generate_streaming_response(self, original_query: str, search_query: str, 
+                                         results: List, conversation_context: Dict):
+        """Generate streaming AI response using Groq"""
+        
+        # Prepare context from retrieved documents
+        context_parts = []
+        for i, result in enumerate(results, 1):
+            source_info = f"Source {i}: {result.metadata.get('source_file', 'Unknown')} (Page {result.metadata.get('page_number', 'N/A')})"
+            context_parts.append(f"{source_info}\n{result.content}\n")
+        
+        context_text = "\n---\n".join(context_parts)
+        
+        # Prepare conversation history if available
+        history_text = ""
+        if conversation_context.get("has_context"):
+            recent_history = conversation_context["chat_history"][-2:]  # Last 2 exchanges
+            history_parts = []
+            for exchange in recent_history:
+                history_parts.append(f"User: {exchange['user']}\nAssistant: {exchange['assistant']}")
+            history_text = "\n\n".join(history_parts)
+        
+        # Create the prompt
+        system_prompt = ENTERPRISE_SYSTEM_PROMPT
+        
+        history_section = f"Recent Conversation History:\n{history_text}\n" if history_text else ""
+        
+        user_prompt = f"""Context Documents:
+{context_text}
+
+{history_section}
+
+User Question: {original_query}
+
+Please provide a helpful answer based ONLY on the context documents provided. Include proper citations in the format [Source: filename.pdf, Page X] for all factual claims."""
+        
+        try:
+            # Generate streaming response using Groq
+            stream = self.groq_client.chat.completions.create(
+                model="llama-3.1-8b-instant",
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt}
+                ],
+                max_tokens=1000,
+                temperature=0.1,  # Low temperature for consistency
+                top_p=0.9,
+                stream=True  # Enable streaming
+            )
+            
+            for chunk in stream:
+                if chunk.choices[0].delta.content is not None:
+                    content = chunk.choices[0].delta.content
+                    yield {
+                        "type": "token",
+                        "content": content
+                    }
+            
+        except Exception as e:
+            logger.error(f"Error generating streaming response: {e}")
+            yield {
+                "type": "error",
+                "error": f"Failed to generate response: {str(e)}"
+            }
     
     def _create_refusal_response(self, question: str, refusal_message: str, reason: str) -> Dict[str, any]:
         """Create a standardized refusal response"""
