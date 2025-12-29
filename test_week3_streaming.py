@@ -299,7 +299,9 @@ class StreamingAPITester:
         print(f"🏥 API Health: {'✅ PASSED' if health_ok else '❌ FAILED'}")
         print(f"⏱️  TTFT Tests: {ttft_results['passed_tests']}/{ttft_results['total_tests']} passed ({ttft_results['success_rate']:.1f}%)")
         print(f"🔄 Concurrent Tests: {concurrent_results['successful_requests']}/{concurrent_results['total_requests']} successful")
-        print(f"🛡️  Hallucination Prevention: {'✅ PASSED' if not hallucination_test['success'] or 'don\\'t have' in hallucination_test.get('response', '').lower() else '❌ FAILED'}")
+        # Check hallucination prevention
+        hallucination_passed = not hallucination_test['success'] or "don't have" in hallucination_test.get('response', '').lower()
+        print(f"🛡️  Hallucination Prevention: {'✅ PASSED' if hallucination_passed else '❌ FAILED'}")
         
         # Week 3 requirements check
         ttft_requirement_met = ttft_results['success_rate'] >= 80  # 80% of tests must pass TTFT

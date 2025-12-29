@@ -8,14 +8,14 @@ from typing import Dict, Any
 import asyncio
 import json
 
-from app.ingestion.pipeline import DocumentIngestionPipeline
-from app.models import (
+from ai_service.app.ingestion.pipeline import DocumentIngestionPipeline
+from ai_service.app.models import (
     DocumentUploadResponse, ProcessingStatus, 
     ChatRequest, ChatResponse, ConversationHistoryRequest, 
     ConversationHistoryResponse, SystemStatsResponse,
     StreamingChatRequest, StreamingChunk, LatencyMetrics
 )
-from app.rag.engine import get_rag_engine
+from ai_service.app.rag.engine import get_rag_engine
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -91,7 +91,7 @@ async def health_check():
         
         return {
             "status": "healthy",
-            "timestamp": pipeline.get_pipeline_stats(),
+            "timestamp": "2025-12-29T14:43:00Z",  # Fixed timestamp
             "system_stats": stats
         }
     except Exception as e:
