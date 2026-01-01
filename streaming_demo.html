@@ -213,7 +213,7 @@
     </div>
 
     <script>
-        const API_BASE = 'http://localhost:8000';
+        const API_BASE = 'http://localhost:8001';
         let sessionId = `demo_session_${Date.now()}`;
         let currentStreamingMessage = null;
         
@@ -253,7 +253,15 @@
                 const streamingSpan = currentStreamingMessage.querySelector('#streamingContent');
                 if (streamingSpan) {
                     streamingSpan.textContent = content;
+                    // Remove typewriter cursor when we have content
+                    if (content.length > 0) {
+                        streamingSpan.classList.remove('typewriter');
+                    }
+                } else {
+                    console.error('Could not find streaming span');
                 }
+            } else {
+                console.error('No current streaming message');
             }
         }
         
@@ -356,7 +364,8 @@
                                         updateMetrics({ time_to_first_token: ttft });
                                     }
                                     
-                                    fullResponse += data.content;
+                                    // Add content (including empty strings to maintain token order)
+                                    fullResponse += data.content || '';
                                     updateStreamingContent(fullResponse);
                                     
                                 } else if (data.type === 'metadata') {
@@ -365,7 +374,13 @@
                                     }
                                     
                                 } else if (data.type === 'error') {
-                                    throw new Error(data.error);
+                                    // Display error message instead of throwing
+                                    if (currentStreamingMessage) {
+                                        currentStreamingMessage.className = 'message ai-message';
+                                        currentStreamingMessage.innerHTML = `<strong>AI:</strong> ${data.error}`;
+                                        currentStreamingMessage = null;
+                                    }
+                                    return; // Exit gracefully
                                     
                                 } else if (data.type === 'done') {
                                     finalizeStreamingMessage(fullResponse, sources);

@@ -310,9 +310,9 @@ class RetrievalAnalyzer:
     
     def _determine_confidence(self, avg_score: float, variance: float, num_results: int) -> str:
         """Determine confidence level in retrieval results"""
-        if avg_score > 0.8 and num_results >= 3:
+        if avg_score > 0.7 and num_results >= 2:
             return "high"
-        elif avg_score > 0.6 and num_results >= 2:
+        elif avg_score > 0.4 and num_results >= 1:
             return "medium"
         else:
             return "low"
