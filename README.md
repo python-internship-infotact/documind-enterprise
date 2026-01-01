@@ -62,8 +62,13 @@ EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
 ### 4. Run & Test
 
 ```bash
-# Start the server
+# Start the backend server
 python -m uvicorn ai_service.main:app --host 0.0.0.0 --port 8000
+
+# In a new terminal, start the frontend (optional)
+cd frontend
+npm install
+npm run dev
 
 # Test streaming (Week 3)
 python test_week3_streaming.py
@@ -71,12 +76,22 @@ python test_week3_streaming.py
 # Test safety (Week 2)
 python test_week2_hallucination.py
 
-# Interactive demo
-# Open streaming_demo.html in browser
+# Interactive demo options:
+# 1. Modern React frontend: http://localhost:5173
+# 2. Simple HTML demo: Open streaming_demo.html in browser
 ```
 
 ## 🎬 Interactive Demo
 
+**Option 1: Modern React Frontend** (Recommended)
+```bash
+cd frontend
+npm install
+npm run dev
+# Open http://localhost:5173
+```
+
+**Option 2: Simple HTML Demo**
 Open `streaming_demo.html` in your browser to experience:
 - Real-time streaming chat interface
 - Live performance metrics (TTFT, tokens/sec)
@@ -134,8 +149,15 @@ documind-enterprise/
 │   │   └── rag/                   # RAG Engine & Safety
 │   ├── main.py                    # FastAPI application
 │   └── requirements.txt           # Dependencies
+├── frontend/                      # React frontend (NEW)
+│   ├── src/
+│   │   ├── components/            # UI components
+│   │   ├── hooks/                 # React hooks
+│   │   └── pages/                 # Application pages
+│   ├── package.json               # Frontend dependencies
+│   └── README.md                  # Frontend documentation
 ├── .env                           # API keys
-├── streaming_demo.html            # Interactive demo
+├── streaming_demo.html            # Simple HTML demo
 ├── test_week3_streaming.py        # Week 3 tests
 ├── test_week2_hallucination.py    # Week 2 tests
 └── validate_groq_setup.py         # Setup validation

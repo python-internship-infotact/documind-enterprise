@@ -6,11 +6,12 @@ interface QuestionComposerProps {
   onSubmit: (question: string) => void;
   isLoading: boolean;
   disabled?: boolean;
+  isConnected?: boolean;
 }
 
 type QueryQuality = "good" | "needs-refinement" | "out-of-scope" | null;
 
-const QuestionComposer = ({ onSubmit, isLoading, disabled }: QuestionComposerProps) => {
+const QuestionComposer = ({ onSubmit, isLoading, disabled, isConnected = true }: QuestionComposerProps) => {
   const [input, setInput] = useState("");
   const [queryQuality, setQueryQuality] = useState<QueryQuality>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -50,7 +51,7 @@ const QuestionComposer = ({ onSubmit, isLoading, disabled }: QuestionComposerPro
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (input.trim() && !isLoading && !disabled) {
+    if (input.trim() && !isLoading && !disabled && isConnected) {
       onSubmit(input.trim());
       setInput("");
     }
@@ -117,15 +118,15 @@ const QuestionComposer = ({ onSubmit, isLoading, disabled }: QuestionComposerPro
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask a question about your documents..."
-              disabled={isLoading || disabled}
+              placeholder={isConnected ? "Ask a question about your documents..." : "Backend disconnected - check server status"}
+              disabled={isLoading || disabled || !isConnected}
               rows={1}
               className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground resize-none focus:outline-none min-h-[24px] max-h-[120px] py-1"
               style={{ height: "auto" }}
             />
             <button
               type="submit"
-              disabled={!input.trim() || isLoading || disabled}
+              disabled={!input.trim() || isLoading || disabled || !isConnected}
               className="p-2 rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex-shrink-0"
             >
               {isLoading ? (

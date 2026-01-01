@@ -12,16 +12,9 @@ import WelcomeMessage from "@/components/WelcomeMessage";
 import { useConversation } from "@/hooks/useConversation";
 import { AnimatePresence } from "framer-motion";
 
-const sampleDocuments = [
-  { id: "1", name: "RefundPolicy_2024.pdf", pages: 24, indexed: true },
-  { id: "2", name: "CustomerService_SOP.pdf", pages: 18, indexed: true },
-  { id: "3", name: "HR_Policy_Manual.pdf", pages: 45, indexed: true },
-  { id: "4", name: "Remote_Work_Guidelines.pdf", pages: 12, indexed: true },
-  { id: "5", name: "VIP_Guidelines.pdf", pages: 8, indexed: true },
-];
-
 const Index = () => {
   const [isPanelOpen, setIsPanelOpen] = useState(true);
+  const [isConnected, setIsConnected] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const {
@@ -30,8 +23,25 @@ const Index = () => {
     isStreaming,
     isRetrieving,
     currentMetrics,
+    documents,
     sendMessage,
+    uploadDocument,
+    checkConnection,
   } = useConversation();
+
+  // Check backend connection on mount
+  useEffect(() => {
+    const checkBackend = async () => {
+      const connected = await checkConnection();
+      setIsConnected(connected);
+    };
+    
+    checkBackend();
+    
+    // Check connection every 30 seconds
+    const interval = setInterval(checkBackend, 30000);
+    return () => clearInterval(interval);
+  }, [checkConnection]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -42,10 +52,18 @@ const Index = () => {
     sendMessage(question);
   };
 
+  const handleDocumentUpload = async (file: File) => {
+    const success = await uploadDocument(file);
+    if (!success) {
+      // Handle upload error - could show a toast notification
+      console.error('Failed to upload document:', file.name);
+    }
+  };
+
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Top Bar */}
-      <TopBar isConnected={true} documentsLoaded={sampleDocuments.length} />
+      <TopBar isConnected={isConnected} documentsLoaded={documents.length} />
 
       {/* Main Content */}
       <div className="flex-1 flex overflow-hidden">
@@ -53,8 +71,9 @@ const Index = () => {
         <ContextPanel
           isOpen={isPanelOpen}
           onClose={() => setIsPanelOpen(false)}
-          documents={sampleDocuments}
-          vectorStatus="ready"
+          documents={documents}
+          vectorStatus={isConnected ? "ready" : "disconnected"}
+          onDocumentUpload={handleDocumentUpload}
         />
 
         {/* Main Chat Area */}
@@ -126,6 +145,7 @@ const Index = () => {
           <QuestionComposer
             onSubmit={handleSubmit}
             isLoading={isLoading}
+            isConnected={isConnected}
           />
         </div>
       </div>
@@ -135,7 +155,7 @@ const Index = () => {
         ttft={currentMetrics.ttft}
         totalTime={currentMetrics.totalTime}
         tokensUsed={currentMetrics.tokensUsed}
-        model="GPT-4o"
+        model="Groq Llama"
         isStreaming={isStreaming}
       />
     </div>
