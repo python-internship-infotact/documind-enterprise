@@ -82,7 +82,7 @@ class PineconeManager:
                 try:
                     # Prepare batch data
                     texts = [doc.content for doc in batch]
-                    metadatas = [self._prepare_metadata(doc.metadata) for doc in batch]
+                    metadatas = [self._prepare_metadata(doc.metadata, doc.content) for doc in batch]
                     ids = [doc.metadata.chunk_id for doc in batch]
                     
                     # Generate embeddings
@@ -135,7 +135,7 @@ class PineconeManager:
                 "failed_count": len(documents)
             }
     
-    def _prepare_metadata(self, metadata) -> Dict[str, Any]:
+    def _prepare_metadata(self, metadata, content: str = None) -> Dict[str, Any]:
         """
         Prepare metadata for Pinecone storage (must be JSON serializable)
         """
@@ -152,6 +152,15 @@ class PineconeManager:
             "file_size": int(metadata.file_size) if metadata.file_size is not None else 0,
             "total_pages": int(metadata.total_pages) if metadata.total_pages is not None else 1
         }
+        
+        # Add content to metadata for retrieval (truncate if too long for Pinecone limits)
+        if content:
+            # Pinecone metadata has size limits, so truncate content if needed
+            max_content_length = 8000  # Conservative limit
+            if len(content) > max_content_length:
+                prepared["content"] = content[:max_content_length] + "... [truncated]"
+            else:
+                prepared["content"] = content
         
         return prepared
     

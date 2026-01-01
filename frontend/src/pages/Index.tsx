@@ -26,6 +26,8 @@ const Index = () => {
     documents,
     sendMessage,
     uploadDocument,
+    deleteDocument,
+    clearAllDocuments,
     checkConnection,
   } = useConversation();
 
@@ -60,6 +62,20 @@ const Index = () => {
     }
   };
 
+  const handleDocumentDelete = async (filename: string) => {
+    const success = await deleteDocument(filename);
+    if (!success) {
+      console.error('Failed to delete document:', filename);
+    }
+  };
+
+  const handleClearAllDocuments = async () => {
+    const success = await clearAllDocuments();
+    if (!success) {
+      console.error('Failed to clear all documents');
+    }
+  };
+
   return (
     <div className="h-screen flex flex-col bg-background">
       {/* Top Bar */}
@@ -74,6 +90,8 @@ const Index = () => {
           documents={documents}
           vectorStatus={isConnected ? "ready" : "disconnected"}
           onDocumentUpload={handleDocumentUpload}
+          onDocumentDelete={handleDocumentDelete}
+          onClearAllDocuments={handleClearAllDocuments}
         />
 
         {/* Main Chat Area */}

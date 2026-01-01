@@ -27,7 +27,7 @@ interface Document {
 }
 
 // Backend API configuration
-const API_BASE = 'http://localhost:8001';
+const API_BASE = 'http://localhost:8000';
 
 export const useConversation = () => {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -263,6 +263,39 @@ export const useConversation = () => {
     }
   }, []);
 
+  const deleteDocument = useCallback(async (filename: string): Promise<boolean> => {
+    try {
+      const response = await fetch(`${API_BASE}/documents/${encodeURIComponent(filename)}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        // Remove document from list
+        setDocuments(prev => prev.filter(doc => doc.name !== filename));
+        return true;
+      }
+      
+      return false;
+    } catch (error) {
+      console.error('Document deletion failed:', error);
+      return false;
+    }
+  }, []);
+
+  const clearAllDocuments = useCallback(async (): Promise<boolean> => {
+    try {
+      // Get all document names and delete them one by one
+      const deletePromises = documents.map(doc => deleteDocument(doc.name));
+      const results = await Promise.all(deletePromises);
+      
+      // Return true if all deletions were successful
+      return results.every(result => result);
+    } catch (error) {
+      console.error('Clear all documents failed:', error);
+      return false;
+    }
+  }, [documents, deleteDocument]);
+
   const checkConnection = useCallback(async (): Promise<boolean> => {
     try {
       const response = await fetch(`${API_BASE}/health`);
@@ -281,6 +314,8 @@ export const useConversation = () => {
     documents,
     sendMessage,
     uploadDocument,
+    deleteDocument,
+    clearAllDocuments,
     checkConnection,
   };
 };
