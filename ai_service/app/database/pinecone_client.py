@@ -1,3 +1,18 @@
+"""
+Pinecone Vector Database Client
+
+This module provides a comprehensive interface for interacting with Pinecone vector database.
+It handles document embeddings, vector storage, similarity search, and document management
+with support for both OpenAI and HuggingFace embedding models.
+
+Key Features:
+- Dynamic embedding model support (OpenAI/HuggingFace)
+- Batch document processing with error handling
+- Semantic similarity search with filtering
+- Document deletion by source file
+- Health monitoring and statistics
+"""
+
 from pinecone import Pinecone, ServerlessSpec
 from langchain_openai import OpenAIEmbeddings
 from langchain_huggingface import HuggingFaceEmbeddings
@@ -12,20 +27,39 @@ from ..config import settings
 logger = logging.getLogger(__name__)
 
 class PineconeManager:
+    """
+    Manages Pinecone vector database operations for document storage and retrieval.
+    
+    This class handles:
+    - Embedding model initialization (OpenAI or HuggingFace)
+    - Pinecone index creation and management
+    - Document vectorization and storage
+    - Similarity search operations
+    - Document deletion and cleanup
+    """
+    
     def __init__(self, config=None):
+        """
+        Initialize the Pinecone manager with embedding model and database connection.
+        
+        Args:
+            config: Configuration object containing API keys and settings
+        """
         if config is None:
             config = settings
             
         self.config = config
         
-        # Initialize embeddings based on provider
+        # Initialize embeddings based on configured provider
         if config.embedding_provider == "openai":
+            # Use OpenAI's text-embedding-ada-002 model (1536 dimensions)
             self.embeddings = OpenAIEmbeddings(
                 openai_api_key=config.openai_api_key,
                 model="text-embedding-ada-002"
             )
             self.embedding_dimension = 1536
         else:  # Default to HuggingFace
+            # Use HuggingFace sentence transformer model (384 dimensions)
             self.embeddings = HuggingFaceEmbeddings(
                 model_name=config.embedding_model,
                 model_kwargs={'device': 'cpu'},
@@ -36,7 +70,7 @@ class PineconeManager:
             
         logger.info(f"Using {config.embedding_provider} embeddings with dimension {self.embedding_dimension}")
         
-        # Initialize Pinecone
+        # Initialize Pinecone connection and index
         try:
             self.pc = Pinecone(api_key=config.pinecone_api_key)
             
@@ -208,7 +242,7 @@ class PineconeManager:
             # Note: This is a simplified approach
             # In production, you might need to implement pagination for large deletions
             results = self.index.query(
-                vector=[0] * 1536,  # Dummy vector
+                vector=[0] * self.embedding_dimension,  # Use correct dimension
                 top_k=10000,  # Large number to get all
                 include_metadata=True,
                 filter=filter_dict

@@ -1,94 +1,141 @@
+# DocuMind Enterprise - Production Docker Compose Configuration
+#
+# This Docker Compose file defines the complete production deployment
+# for DocuMind Enterprise, including all services, networking, and
+# health monitoring configurations.
+#
+# Services:
+# - backend: FastAPI application with RAG capabilities
+# - frontend: React application with Nginx
+# - redis: Caching and session storage
+# - nginx: Reverse proxy and load balancer
+#
+# Usage:
+#   docker-compose -f docker-compose.prod.yaml up -d
+#
+# Requirements:
+# - .env file with API keys
+# - Docker and Docker Compose installed
+# - Sufficient system resources
+
 version: '3.8'
 
 services:
-  # Backend API Service
+  # Backend API Service - FastAPI with RAG capabilities
   backend:
+    # Build backend from Dockerfile.backend
     build:
       context: .
       dockerfile: Dockerfile.backend
     container_name: documind-backend
+    # Expose port 8000 for API access
     ports:
       - "8000:8000"
+    # Environment variables for configuration
     environment:
-      - GROQ_API_KEY=${GROQ_API_KEY}
-      - PINECONE_API_KEY=${PINECONE_API_KEY}
-      - PINECONE_ENVIRONMENT=${PINECONE_ENVIRONMENT:-us-east-1}
-      - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME:-documind-hf}
-      - EMBEDDING_PROVIDER=${EMBEDDING_PROVIDER:-huggingface}
-      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}
-      - CHUNK_SIZE=${CHUNK_SIZE:-1000}
-      - CHUNK_OVERLAP=${CHUNK_OVERLAP:-200}
-      - MAX_FILE_SIZE_MB=${MAX_FILE_SIZE_MB:-50}
+      - GROQ_API_KEY=${GROQ_API_KEY}  # Groq LLM API key
+      - PINECONE_API_KEY=${PINECONE_API_KEY}  # Pinecone vector database API key
+      - PINECONE_ENVIRONMENT=${PINECONE_ENVIRONMENT:-us-east-1}  # Pinecone region
+      - PINECONE_INDEX_NAME=${PINECONE_INDEX_NAME:-documind-hf}  # Vector index name
+      - EMBEDDING_PROVIDER=${EMBEDDING_PROVIDER:-huggingface}  # Embedding model provider
+      - EMBEDDING_MODEL=${EMBEDDING_MODEL:-sentence-transformers/all-MiniLM-L6-v2}  # Model name
+      - CHUNK_SIZE=${CHUNK_SIZE:-1000}  # Document chunk size
+      - CHUNK_OVERLAP=${CHUNK_OVERLAP:-200}  # Chunk overlap for context
+      - MAX_FILE_SIZE_MB=${MAX_FILE_SIZE_MB:-50}  # Maximum upload file size
+    # Mount logs directory for persistent logging
     volumes:
       - ./logs:/app/logs
+    # Restart policy for production reliability
     restart: unless-stopped
+    # Health check to monitor service status
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+    # Connect to application network
     networks:
       - documind-network
 
-  # Frontend Service
+  # Frontend Service - React application with Nginx
   frontend:
+    # Build frontend from Dockerfile.frontend
     build:
       context: .
       dockerfile: Dockerfile.frontend
     container_name: documind-frontend
+    # Expose port 8080 for web access
     ports:
       - "8080:8080"
+    # Wait for backend to be healthy before starting
     depends_on:
       backend:
         condition: service_healthy
+    # Restart policy for production reliability
     restart: unless-stopped
+    # Health check to monitor frontend availability
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+    # Connect to application network
     networks:
       - documind-network
 
-  # Redis for caching and rate limiting (optional enhancement)
+  # Redis Service - Caching and rate limiting storage
   redis:
+    # Use official Redis Alpine image for smaller footprint
     image: redis:7-alpine
     container_name: documind-redis
+    # Expose Redis port for internal communication
     ports:
       - "6379:6379"
+    # Persistent data storage
     volumes:
       - redis_data:/data
+    # Restart policy for production reliability
     restart: unless-stopped
+    # Health check to monitor Redis availability
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 30s
       timeout: 10s
       retries: 3
+    # Connect to application network
     networks:
       - documind-network
 
-  # Nginx reverse proxy for production
+  # Nginx Reverse Proxy - Load balancing and SSL termination
   nginx:
+    # Use official Nginx Alpine image
     image: nginx:alpine
     container_name: documind-proxy
+    # Expose standard HTTP and HTTPS ports
     ports:
       - "80:80"
       - "443:443"
+    # Mount custom Nginx configuration and SSL certificates
     volumes:
-      - ./nginx-proxy.conf:/etc/nginx/nginx.conf:ro
-      - ./ssl:/etc/nginx/ssl:ro
+      - ./nginx-proxy.conf:/etc/nginx/nginx.conf:ro  # Nginx configuration
+      - ./ssl:/etc/nginx/ssl:ro  # SSL certificates directory
+    # Wait for both frontend and backend to be ready
     depends_on:
       - frontend
       - backend
+    # Restart policy for production reliability
     restart: unless-stopped
+    # Connect to application network
     networks:
       - documind-network
 
+# Persistent volumes for data storage
 volumes:
-  redis_data:
+  redis_data:  # Redis data persistence
 
+# Network configuration for service communication
 networks:
   documind-network:
-    driver: bridge
+    driver: bridge  # Bridge network for isolated service communication

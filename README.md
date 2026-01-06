@@ -1,58 +1,77 @@
-# DocuMind Enterprise - Week 4 Production Release
+# DocuMind Enterprise
 
-🚀 **Production-ready RAG system with enhanced features and complete Dockerization**
+A production-ready Retrieval-Augmented Generation (RAG) system for enterprise document intelligence with real-time streaming chat capabilities.
 
-## ✅ Week 4 Implementation Status: COMPLETE
+## Features
 
-**All Week 4 features implemented and tested:**
-- ✅ **Enhanced Source Metadata & Citations** - Rich citation data with relevance scores
-- ✅ **Complete Dockerization** - Production-ready containers with health checks
-- ✅ **API Rate Limiting** - Comprehensive abuse prevention with token bucket algorithm
-- ✅ **End-to-End Testing** - Automated testing suite with stress testing capabilities
+- **Document Processing**: Upload and process PDF documents with intelligent chunking
+- **Semantic Search**: Vector-based document retrieval using Pinecone
+- **AI Chat Interface**: Real-time streaming responses with Groq LLM integration
+- **Enhanced Citations**: Rich metadata with relevance scores and source information
+- **Rate Limiting**: Token bucket algorithm for API abuse prevention
+- **Production Ready**: Complete Docker containerization with health monitoring
 
-## 🏗️ Enhanced Architecture
+## Architecture
 
-```
-User Request → Rate Limiter → Safety Check → History Processing → 
-Hybrid Retrieval → Context Ranking → AI Generation (Streaming) → 
-Enhanced Citations → Response Filter → Real-time Token Delivery
-```
+The system consists of two main components:
 
-## 🚀 Quick Start
+1. **Backend (Python/FastAPI)**: Document processing, vector storage, and AI chat API
+2. **Frontend (React/TypeScript)**: Modern web interface with real-time streaming
 
-### Option 1: Docker Production Deployment (Recommended)
+## Quick Start
 
+### Prerequisites
+
+- Docker and Docker Compose
+- API Keys for:
+  - Groq (for AI chat)
+  - Pinecone (for vector storage)
+
+### Installation
+
+1. Clone the repository:
 ```bash
-# Clone and navigate
+git clone <repository-url>
 cd documind-enterprise
+```
 
-# Set up environment
+2. Set up environment variables:
+```bash
 cp .env.example .env
 # Edit .env with your API keys
+```
 
-# Deploy with Docker
+3. Deploy with Docker:
+```bash
 chmod +x deploy.sh
 ./deploy.sh
 ```
 
-### Option 2: Development Setup
+The application will be available at:
+- Frontend: http://localhost:8080
+- Backend API: http://localhost:8000
 
+### Development Setup
+
+#### Backend
 ```bash
-# Backend
+cd ai_service
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r ai_service/requirements.txt
-python -m uvicorn ai_service.main:app --host 0.0.0.0 --port 8000
+pip install -r requirements.txt
+python -m uvicorn ai_service.main:app --host 0.0.0.0 --port 8000 --reload
+```
 
-# Frontend (new terminal)
+#### Frontend
+```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-## 🔧 API Configuration
+## Configuration
 
-Create `.env` file with your API keys:
+Create a `.env` file with the following variables:
 
 ```env
 # Groq Configuration (for AI chat)
@@ -66,186 +85,84 @@ PINECONE_INDEX_NAME=documind-hf
 # Embedding Configuration
 EMBEDDING_PROVIDER=huggingface
 EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+
+# Optional Settings
+CHUNK_SIZE=1000
+CHUNK_OVERLAP=200
+MAX_FILE_SIZE_MB=50
 ```
 
-## 🆕 Week 4 New Features
+## API Endpoints
 
-### 1. Enhanced Source Metadata & Citations
-
-- **Rich Citation Data**: Document title, section headers, relevance scores
-- **Chunk Information**: Chunk index and total chunks for better context
-- **File Metadata**: File size, total pages, creation timestamps
-- **Relevance Scoring**: Percentage-based relevance scores for each citation
-
-### 2. Complete Dockerization
-
-- **Multi-stage Builds**: Optimized Docker images for production
-- **Health Checks**: Automated health monitoring for all services
-- **Security**: Non-root users, minimal attack surface
-- **Scalability**: Ready for orchestration with Kubernetes
-
-### 3. API Rate Limiting
-
-- **Token Bucket Algorithm**: Sophisticated rate limiting with burst handling
-- **Endpoint-specific Limits**: Different limits for chat, upload, and general endpoints
-- **Sliding Window**: Time-based request tracking
-- **Automatic Blocking**: Temporary blocks for abuse prevention
-- **Rate Limit Headers**: Standard HTTP headers for client awareness
-
-### 4. Comprehensive Testing
-
-- **End-to-End Tests**: Complete workflow validation
-- **Stress Testing**: Concurrent user simulation and load testing
-- **Performance Metrics**: TTFT, throughput, and reliability measurements
-- **Automated Validation**: CI/CD ready test suites
-
-## 📡 Enhanced API Endpoints
-
-### Core Endpoints
-- `POST /chat/stream` - **Real-time streaming chat** with enhanced citations
-- `POST /chat` - Traditional chat with rich metadata
-- `POST /documents/upload` - Upload and process PDFs with rate limiting
+### Document Management
+- `POST /documents/upload` - Upload and process PDF documents
 - `DELETE /documents/{filename}` - Delete specific documents
-- `GET /health` - System health with detailed metrics
-- `GET /stats` - Comprehensive system statistics
+- `GET /documents/search` - Search documents using semantic similarity
 
-### New Week 4 Endpoints
-- `GET /rate-limit-status` - Current rate limit status for client
-- Enhanced error responses with retry-after headers
-- Detailed citation metadata in all responses
+### Chat Interface
+- `POST /chat/stream` - Real-time streaming chat with enhanced citations
+- `POST /chat` - Traditional chat responses
+- `GET /chat/history` - Retrieve conversation history
+- `DELETE /chat/history/{session_id}` - Clear conversation history
 
-## 🧪 Testing & Validation
+### System Management
+- `GET /health` - System health check
+- `GET /stats` - System statistics
+- `GET /rate-limit-status` - Current rate limit status
 
-### Run End-to-End Tests
-```bash
-python tests/end_to_end_test.py
-```
+## Rate Limiting
 
-### Run Stress Tests
-```bash
-python tests/stress_test.py
-```
+The system implements sophisticated rate limiting:
+- **Chat endpoints**: 30 requests per minute
+- **Upload endpoints**: 5 requests per minute
+- **General endpoints**: 60 requests per minute
 
-### Expected Results
-- **End-to-End**: 100% success rate for all core functionality
-- **Stress Test**: >95% success rate under concurrent load
-- **Rate Limiting**: Proper throttling and recovery
-- **Performance**: Sub-second TTFT, 25-45 tokens/second streaming
+Rate limits use a token bucket algorithm with automatic recovery.
 
-## 🐳 Docker Services
-
-### Production Stack
-- **Backend**: FastAPI with rate limiting and enhanced citations
-- **Frontend**: React with Nginx, optimized for production
-- **Redis**: Caching and session management
-- **Nginx Proxy**: Load balancing and SSL termination
-
-### Service Health Monitoring
-```bash
-# Check all services
-docker-compose -f docker-compose.prod.yaml ps
-
-# View logs
-docker-compose -f docker-compose.prod.yaml logs -f
-
-# Monitor health
-curl http://localhost:8000/health
-curl http://localhost:8080/health
-```
-
-## 📊 Performance Metrics (Week 4)
-
-**Enhanced Streaming Performance:**
-- ✅ TTFT: < 500ms consistently
-- ✅ Streaming: 30-50 tokens/second
-- ✅ Enhanced Citations: Rich metadata with relevance scores
-- ✅ Rate Limiting: Prevents abuse while maintaining performance
-
-**Production Readiness:**
-- ✅ Docker Health Checks: All services monitored
-- ✅ Rate Limiting: 30 requests/minute for chat, 5/minute for uploads
-- ✅ Error Handling: Comprehensive error responses with retry guidance
-- ✅ Security: Non-root containers, input validation, CORS configuration
-
-**Stress Test Results:**
-- ✅ Concurrent Users: Handles 50+ simultaneous requests
-- ✅ Upload Performance: Processes multiple PDFs concurrently
-- ✅ Memory Usage: Stable under load with automatic cleanup
-- ✅ Recovery: Graceful handling of rate limit violations
-
-## 🔒 Security Features
-
-### Rate Limiting
-- **Token Bucket**: Prevents burst attacks
-- **Sliding Window**: Time-based request tracking
-- **Endpoint-specific**: Different limits for different operations
-- **Automatic Recovery**: Temporary blocks with automatic unblocking
-
-### Input Validation
-- **File Type Validation**: Only PDF files accepted
-- **Size Limits**: Configurable maximum file sizes
-- **Content Sanitization**: Safe PDF processing
-- **Query Validation**: Input sanitization for all queries
-
-### Container Security
-- **Non-root Users**: All containers run as non-root
-- **Minimal Images**: Alpine-based images with minimal attack surface
-- **Health Checks**: Automated monitoring and restart capabilities
-- **Network Isolation**: Services communicate through defined networks
-
-## 📁 Project Structure (Week 4)
+## Project Structure
 
 ```
 documind-enterprise/
-├── ai_service/
+├── ai_service/                 # Backend FastAPI application
 │   ├── app/
-│   │   ├── middleware/           # NEW: Rate limiting middleware
-│   │   │   ├── rate_limiter.py   # Token bucket rate limiter
-│   │   │   └── __init__.py
-│   │   ├── rag/                  # Enhanced RAG engine
-│   │   │   └── engine.py         # Enhanced citations
-│   │   └── ...
-│   ├── main.py                   # Enhanced with rate limiting
-│   └── requirements.txt
-├── frontend/                     # Enhanced UI
+│   │   ├── config.py          # Configuration settings
+│   │   ├── models.py          # Pydantic models
+│   │   ├── database/          # Vector database integration
+│   │   ├── ingestion/         # Document processing pipeline
+│   │   ├── rag/              # RAG engine and prompts
+│   │   └── middleware/        # Rate limiting middleware
+│   ├── main.py               # FastAPI application entry point
+│   └── requirements.txt      # Python dependencies
+├── frontend/                 # React frontend application
 │   ├── src/
-│   │   ├── components/
-│   │   │   └── AIResponse.tsx    # Enhanced citations display
-│   │   └── hooks/
-│   │       └── useConversation.ts # Enhanced citation handling
-│   └── ...
-├── tests/                        # NEW: Comprehensive testing
-│   ├── end_to_end_test.py        # Complete workflow testing
-│   ├── stress_test.py            # Load and performance testing
-│   └── __init__.py
-├── Dockerfile.backend            # NEW: Production backend image
-├── Dockerfile.frontend           # NEW: Production frontend image
-├── docker-compose.prod.yaml      # NEW: Production deployment
-├── nginx-proxy.conf              # NEW: Production proxy config
-├── deploy.sh                     # NEW: Automated deployment
-└── README.md                     # Updated documentation
+│   │   ├── components/       # React components
+│   │   ├── hooks/           # Custom React hooks
+│   │   └── lib/             # Utility functions
+│   ├── package.json         # Node.js dependencies
+│   └── vite.config.ts       # Vite configuration
+├── docker-compose.prod.yaml  # Production Docker setup
+├── Dockerfile.backend        # Backend Docker image
+├── Dockerfile.frontend       # Frontend Docker image
+├── deploy.sh                # Deployment script
+├── nginx-proxy.conf         # Nginx proxy configuration
+└── .env.example            # Environment variables template
 ```
 
-## 🎉 Week 4 Achievement Summary
+## Security Features
 
-| Feature | Status | Performance |
-|---------|--------|-------------|
-| Enhanced Citations | ✅ Complete | Rich metadata with relevance scores |
-| Dockerization | ✅ Complete | Production-ready with health checks |
-| Rate Limiting | ✅ Complete | Token bucket with endpoint-specific limits |
-| Stress Testing | ✅ Complete | 95%+ success rate under load |
-| End-to-End Testing | ✅ Complete | Automated validation suite |
-| Production Deployment | ✅ Complete | One-command deployment |
+- **Input Validation**: Comprehensive validation for all inputs
+- **Rate Limiting**: Prevents API abuse and ensures fair usage
+- **Container Security**: Non-root users and minimal attack surface
+- **CORS Configuration**: Proper cross-origin resource sharing setup
+- **Health Monitoring**: Automated health checks for all services
 
-**🏆 Production Status: READY FOR ENTERPRISE DEPLOYMENT**
+## Performance
 
-## 🚀 Next Steps
+- **Time to First Token (TTFT)**: < 500ms
+- **Streaming Speed**: 30-50 tokens per second
+- **Concurrent Users**: Supports 50+ simultaneous requests
+- **Document Processing**: Handles multiple PDF uploads concurrently
 
-The system is now production-ready with:
-- Complete containerization for easy deployment
-- Comprehensive rate limiting for abuse prevention
-- Enhanced citations with rich metadata
-- Automated testing and validation
-- Production-grade security and monitoring
+## License
 
-Ready for enterprise deployment and scaling!
+This project is licensed under the MIT License.

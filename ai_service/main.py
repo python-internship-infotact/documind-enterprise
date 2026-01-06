@@ -1,3 +1,20 @@
+"""
+DocuMind Enterprise - Main FastAPI Application
+
+This is the main entry point for the DocuMind Enterprise RAG system.
+It provides RESTful APIs for document processing, semantic search, and AI-powered chat
+with real-time streaming capabilities and comprehensive rate limiting.
+
+Key Features:
+- Document upload and processing (PDF support)
+- Vector-based semantic search using Pinecone
+- AI chat with Groq LLM integration
+- Real-time streaming responses
+- Rate limiting and abuse prevention
+- Session-based conversation memory
+- Enhanced citations with metadata
+"""
+
 from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
@@ -8,6 +25,7 @@ from typing import Dict, Any
 import asyncio
 import json
 
+# Import application components
 from ai_service.app.ingestion.pipeline import DocumentIngestionPipeline
 from ai_service.app.models import (
     DocumentUploadResponse, ProcessingStatus, 
@@ -18,18 +36,19 @@ from ai_service.app.models import (
 from ai_service.app.rag.engine import get_rag_engine
 from ai_service.app.middleware.rate_limiter import rate_limiter
 
-# Configure logging
+# Configure application logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Initialize FastAPI app
+# Initialize FastAPI application with metadata
 app = FastAPI(
     title="DocuMind Enterprise API",
     description="Enterprise Document Intelligence and RAG System with Chat Capabilities and Streaming",
     version="3.0.0"
 )
 
-# Add CORS middleware
+# Configure CORS middleware for cross-origin requests
+# Note: In production, replace "*" with specific allowed origins
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],  # Configure appropriately for production
@@ -38,43 +57,53 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Add rate limiting middleware
+# Add rate limiting middleware to prevent API abuse
 @app.middleware("http")
 async def rate_limit_middleware(request: Request, call_next):
-    # Check rate limit
+    """
+    Rate limiting middleware that checks request limits before processing.
+    Uses token bucket algorithm with endpoint-specific limits.
+    """
+    # Check rate limit before processing request
     rate_limit_response = await rate_limiter.check_rate_limit(request)
     if rate_limit_response:
         return rate_limit_response
     
-    # Process request
+    # Process the request
     response = await call_next(request)
     
-    # Add rate limit headers if available
+    # Add rate limit headers to response if available
     if hasattr(request.state, 'rate_limit_headers'):
         for header, value in request.state.rate_limit_headers.items():
             response.headers[header] = value
     
     return response
 
-# Initialize components
+# Initialize core application components
 pipeline = DocumentIngestionPipeline()
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize RAG engine on startup"""
+    """
+    Application startup event handler.
+    Initializes the RAG engine and starts background cleanup tasks.
+    """
     try:
-        # Initialize RAG engine
+        # Initialize RAG engine with vector database and LLM connections
         rag_engine = get_rag_engine()
         logger.info("RAG engine initialized successfully")
         
-        # Start background cleanup task
+        # Start background cleanup task for expired sessions
         asyncio.create_task(periodic_cleanup())
         
     except Exception as e:
         logger.error(f"Failed to initialize RAG engine: {e}")
 
 async def periodic_cleanup():
-    """Periodic cleanup of expired sessions"""
+    """
+    Background task that periodically cleans up expired conversation sessions.
+    Runs every hour to maintain system performance and memory usage.
+    """
     while True:
         try:
             await asyncio.sleep(3600)  # Run every hour

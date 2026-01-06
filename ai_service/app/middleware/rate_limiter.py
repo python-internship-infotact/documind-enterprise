@@ -1,5 +1,21 @@
 """
-Rate limiting middleware for API abuse prevention
+API Rate Limiting Middleware
+
+This module implements sophisticated rate limiting using a token bucket algorithm
+to prevent API abuse and ensure fair usage across different endpoints.
+
+Key Features:
+- Token bucket algorithm with burst handling
+- Endpoint-specific rate limits
+- Sliding window request tracking
+- Automatic recovery and cleanup
+- Standard HTTP rate limit headers
+- IP-based client identification
+
+Rate Limits:
+- Chat endpoints: 30 requests per minute
+- Upload endpoints: 5 requests per minute  
+- General endpoints: 60 requests per minute
 """
 
 import time
@@ -15,7 +31,13 @@ logger = logging.getLogger(__name__)
 
 class RateLimiter:
     """
-    Token bucket rate limiter with sliding window
+    Token bucket rate limiter with sliding window tracking.
+    
+    Implements rate limiting using token bucket algorithm where:
+    - Each client gets a bucket with a maximum number of tokens
+    - Tokens are consumed for each request
+    - Tokens are replenished at a fixed rate
+    - Different endpoints have different token costs and limits
     """
     
     def __init__(self):

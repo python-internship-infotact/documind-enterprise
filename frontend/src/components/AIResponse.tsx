@@ -1,30 +1,47 @@
+/**
+ * AI Response Component
+ * 
+ * Displays AI-generated responses with enhanced citations, confidence indicators,
+ * and performance metrics. Supports real-time streaming with smooth animations.
+ * 
+ * Features:
+ * - Real-time streaming text display
+ * - Enhanced citations with metadata
+ * - Confidence level indicators
+ * - Performance metrics display
+ * - Smooth animations and transitions
+ * - Responsive design
+ */
+
 import { Brain, FileText, ExternalLink, CheckCircle2, AlertTriangle, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 
+// Enhanced citation interface with rich metadata
 interface Citation {
   id: string;
   document: string;
   page: number;
   excerpt: string;
-  document_title?: string;
-  section_header?: string;
-  relevance_score?: number;
-  chunk_index?: number;
-  total_chunks?: number;
-  created_at?: string;
-  file_size?: number;
-  total_pages?: number;
+  document_title?: string;  // Full document title
+  section_header?: string;  // Section or chapter header
+  relevance_score?: number;  // Relevance score (0-100)
+  chunk_index?: number;  // Index of this chunk
+  total_chunks?: number;  // Total chunks in document
+  created_at?: string;  // Document creation timestamp
+  file_size?: number;  // File size in bytes
+  total_pages?: number;  // Total pages in document
 }
 
+// Props interface for the AIResponse component
 interface AIResponseProps {
-  content: string;
-  citations: Citation[];
-  confidence: "high" | "medium" | "low";
-  isStreaming: boolean;
-  timestamp: Date;
-  ttft?: number;
-  totalTime?: number;
-  tokensUsed?: number;
+  content: string;  // AI response content (may be streaming)
+  citations: Citation[];  // Array of source citations
+  confidence: "high" | "medium" | "low";  // Response confidence level
+  isStreaming: boolean;  // Whether response is currently streaming
+  timestamp: Date;  // Response timestamp
+  ttft?: number;  // Time to First Token in milliseconds
+  totalTime?: number;  // Total response time in milliseconds
+  tokensUsed?: number;  // Number of tokens in response
 }
 
 const AIResponse = ({

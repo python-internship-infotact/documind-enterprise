@@ -1,5 +1,22 @@
+/**
+ * Custom React Hook for Managing Conversation State and API Interactions
+ * 
+ * This hook provides a complete interface for managing chat conversations
+ * with the DocuMind Enterprise backend, including real-time streaming,
+ * document management, and conversation history.
+ * 
+ * Features:
+ * - Real-time streaming chat responses
+ * - Document upload and management
+ * - Conversation history tracking
+ * - Performance metrics (TTFT, response time)
+ * - Citation handling with source information
+ * - Error handling and loading states
+ */
+
 import { useState, useRef, useCallback } from "react";
 
+// Type definitions for conversation messages
 interface Message {
   id: string;
   type: "user" | "ai" | "refusal";
@@ -12,18 +29,19 @@ interface Message {
     excerpt: string;
   }>;
   confidence?: "high" | "medium" | "low";
-  ttft?: number;
-  totalTime?: number;
-  tokensUsed?: number;
-  refusalReason?: string;
-  refusalSuggestions?: string[];
+  ttft?: number;  // Time to First Token in milliseconds
+  totalTime?: number;  // Total response time in milliseconds
+  tokensUsed?: number;  // Number of tokens in response
+  refusalReason?: string;  // Reason for query refusal
+  refusalSuggestions?: string[];  // Suggested alternative queries
 }
 
+// Type definition for uploaded documents
 interface Document {
   id: string;
   name: string;
   pages: number;
-  indexed: boolean;
+  indexed: boolean;  // Whether document has been processed and indexed
 }
 
 // Backend API configuration
