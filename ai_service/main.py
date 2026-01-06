@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks
+from fastapi import FastAPI, UploadFile, File, HTTPException, BackgroundTasks, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 import os
@@ -16,6 +16,7 @@ from ai_service.app.models import (
     StreamingChatRequest, StreamingChunk, LatencyMetrics
 )
 from ai_service.app.rag.engine import get_rag_engine
+from ai_service.app.middleware.rate_limiter import rate_limiter
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -36,6 +37,24 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add rate limiting middleware
+@app.middleware("http")
+async def rate_limit_middleware(request: Request, call_next):
+    # Check rate limit
+    rate_limit_response = await rate_limiter.check_rate_limit(request)
+    if rate_limit_response:
+        return rate_limit_response
+    
+    # Process request
+    response = await call_next(request)
+    
+    # Add rate limit headers if available
+    if hasattr(request.state, 'rate_limit_headers'):
+        for header, value in request.state.rate_limit_headers.items():
+            response.headers[header] = value
+    
+    return response
 
 # Initialize components
 pipeline = DocumentIngestionPipeline()
@@ -81,6 +100,23 @@ async def root():
             "Sub-second Time to First Token (TTFT)"
         ]
     }
+
+@app.get("/rate-limit-status")
+async def get_rate_limit_status(request: Request, endpoint_type: str = "default"):
+    """Get current rate limit status for the client"""
+    try:
+        client_ip = rate_limiter._get_client_ip(request)
+        status = rate_limiter.get_rate_limit_info(client_ip, endpoint_type)
+        
+        return {
+            "client_ip": client_ip,
+            "rate_limit_status": status,
+            "timestamp": "2025-12-29T14:43:00Z"
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to get rate limit status: {e}")
+        raise HTTPException(status_code=500, detail=f"Rate limit status failed: {str(e)}")
 
 @app.get("/health")
 async def health_check():

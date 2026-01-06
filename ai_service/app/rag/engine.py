@@ -119,7 +119,15 @@ class DocuMindRAGEngine:
                     "source_file": r.metadata.get("source_file", ""),
                     "page_number": r.metadata.get("page_number", 0),
                     "score": r.score,
-                    "content_preview": r.content[:100] + "..." if len(r.content) > 100 else r.content
+                    "content_preview": r.content[:200] + "..." if len(r.content) > 200 else r.content,
+                    "document_title": r.metadata.get("document_title", ""),
+                    "section_header": r.metadata.get("section_header", ""),
+                    "chunk_index": r.metadata.get("chunk_index", 0),
+                    "total_chunks": r.metadata.get("total_chunks", 1),
+                    "created_at": r.metadata.get("created_at", ""),
+                    "file_size": r.metadata.get("file_size", 0),
+                    "total_pages": r.metadata.get("total_pages", 1),
+                    "relevance_score": round(r.score * 100, 1)  # Convert to percentage
                 }
                 for r in ranked_results
             ]
@@ -212,7 +220,15 @@ class DocuMindRAGEngine:
                     "source_file": r.metadata.get("source_file", ""),
                     "page_number": r.metadata.get("page_number", 0),
                     "score": r.score,
-                    "content_preview": r.content[:100] + "..." if len(r.content) > 100 else r.content
+                    "content_preview": r.content[:200] + "..." if len(r.content) > 200 else r.content,
+                    "document_title": r.metadata.get("document_title", ""),
+                    "section_header": r.metadata.get("section_header", ""),
+                    "chunk_index": r.metadata.get("chunk_index", 0),
+                    "total_chunks": r.metadata.get("total_chunks", 1),
+                    "created_at": r.metadata.get("created_at", ""),
+                    "file_size": r.metadata.get("file_size", 0),
+                    "total_pages": r.metadata.get("total_pages", 1),
+                    "relevance_score": round(r.score * 100, 1)  # Convert to percentage
                 }
                 for r in ranked_results
             ]

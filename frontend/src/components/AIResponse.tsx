@@ -6,6 +6,14 @@ interface Citation {
   document: string;
   page: number;
   excerpt: string;
+  document_title?: string;
+  section_header?: string;
+  relevance_score?: number;
+  chunk_index?: number;
+  total_chunks?: number;
+  created_at?: string;
+  file_size?: number;
+  total_pages?: number;
 }
 
 interface AIResponseProps {
@@ -81,7 +89,7 @@ const AIResponse = ({
             <div className="flex items-center gap-2 mb-2">
               <FileText className="w-4 h-4 text-citation" />
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                Citations
+                Citations ({citations.length})
               </span>
             </div>
             <div className="space-y-2">
@@ -93,12 +101,32 @@ const AIResponse = ({
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-medium text-citation">{citation.document}</span>
-                        <span className="text-xs text-muted-foreground">Page {citation.page}</span>
+                        <span className="text-xs font-medium text-citation">
+                          {citation.document_title || citation.document}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          Page {citation.page}
+                          {citation.total_pages && citation.total_pages > 1 && ` of ${citation.total_pages}`}
+                        </span>
+                        {citation.relevance_score && (
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-primary/10 text-primary font-mono">
+                            {citation.relevance_score}%
+                          </span>
+                        )}
                       </div>
-                      <p className="text-xs text-muted-foreground leading-relaxed line-clamp-2">
+                      {citation.section_header && (
+                        <div className="text-xs text-muted-foreground/80 mb-1 italic">
+                          Section: {citation.section_header}
+                        </div>
+                      )}
+                      <p className="text-xs text-muted-foreground leading-relaxed line-clamp-3">
                         "{citation.excerpt}"
                       </p>
+                      {citation.chunk_index !== undefined && citation.total_chunks && citation.total_chunks > 1 && (
+                        <div className="text-xs text-muted-foreground/60 mt-1">
+                          Chunk {citation.chunk_index + 1} of {citation.total_chunks}
+                        </div>
+                      )}
                     </div>
                     <ExternalLink className="w-3.5 h-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 mt-0.5" />
                   </div>

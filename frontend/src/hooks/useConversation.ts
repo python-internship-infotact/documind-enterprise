@@ -201,6 +201,14 @@ export const useConversation = () => {
                     document: source.source_file || 'Unknown',
                     page: source.page_number || 1,
                     excerpt: source.content_preview || '',
+                    document_title: source.document_title || '',
+                    section_header: source.section_header || '',
+                    relevance_score: source.relevance_score || 0,
+                    chunk_index: source.chunk_index || 0,
+                    total_chunks: source.total_chunks || 1,
+                    created_at: source.created_at || '',
+                    file_size: source.file_size || 0,
+                    total_pages: source.total_pages || 1,
                   }));
 
                   const totalTime = Date.now() - startTime;
