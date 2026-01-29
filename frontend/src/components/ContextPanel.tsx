@@ -181,9 +181,9 @@ const ContextPanel = ({ isOpen, onClose, documents, vectorStatus, onDocumentUplo
                   <div className="flex items-start gap-2 mb-3">
                     <AlertTriangle className="w-4 h-4 text-destructive mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="text-sm font-medium text-destructive">Clear All Documents</p>
+                      <p className="text-sm font-medium text-destructive">Complete System Reset</p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        This will remove all {documents.length} documents from the knowledge base. This action cannot be undone.
+                        This will completely reset the system: remove all {documents.length} documents, clear conversation history, and reset all system state. This action cannot be undone.
                       </p>
                     </div>
                   </div>
@@ -192,7 +192,7 @@ const ContextPanel = ({ isOpen, onClose, documents, vectorStatus, onDocumentUplo
                       onClick={handleClearAll}
                       className="flex-1 px-3 py-1.5 text-xs bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 transition-colors"
                     >
-                      Clear All
+                      Reset System
                     </button>
                     <button
                       onClick={() => setShowClearConfirm(false)}

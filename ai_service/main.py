@@ -383,6 +383,55 @@ async def manual_cleanup():
         logger.error(f"Manual cleanup failed: {e}")
         raise HTTPException(status_code=500, detail=f"Cleanup failed: {str(e)}")
 
+@app.post("/api/clear-memory")
+async def clear_all_conversation_memory():
+    """Clear all conversation memory and session history"""
+    try:
+        rag_engine = get_rag_engine()
+        
+        # Clear all conversation memory using the engine method
+        cleared_sessions = rag_engine.clear_all_conversation_memory()
+        
+        return {
+            "success": True,
+            "message": "All conversation memory cleared successfully",
+            "cleared_sessions": cleared_sessions
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to clear conversation memory: {e}")
+        return {
+            "success": False,
+            "message": f"Failed to clear conversation memory: {str(e)}",
+            "cleared_sessions": 0
+        }
+    
+@app.post("/api/clear-rate-limits")
+async def clear_all_rate_limits():
+    """Clear all rate limiter state"""
+    try:
+        # Get count of clients before clearing
+        client_count = len(rate_limiter.clients)
+        
+        # Clear all rate limiter state
+        rate_limiter.clients.clear()
+        
+        logger.info(f"Cleared rate limits for {client_count} clients")
+        
+        return {
+            "success": True,
+            "message": "All rate limiter state cleared successfully",
+            "cleared_clients": client_count
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to clear rate limiter state: {e}")
+        return {
+            "success": False,
+            "message": f"Failed to clear rate limiter state: {str(e)}",
+            "cleared_clients": 0
+        }
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

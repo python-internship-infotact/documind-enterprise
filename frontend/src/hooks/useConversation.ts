@@ -310,12 +310,60 @@ export const useConversation = () => {
 
   const clearAllDocuments = useCallback(async (): Promise<boolean> => {
     try {
-      // Get all document names and delete them one by one
+      // Step 1: Clear vector database (existing approach)
       const deletePromises = documents.map(doc => deleteDocument(doc.name));
-      const results = await Promise.all(deletePromises);
+      const deleteResults = await Promise.all(deletePromises);
       
-      // Return true if all deletions were successful
-      return results.every(result => result);
+      // Step 2: Clear conversation memory
+      let memoryCleared = false;
+      try {
+        const memoryResponse = await fetch(`${API_BASE}/api/clear-memory`, {
+          method: 'POST',
+        });
+        const memoryResult = await memoryResponse.json();
+        memoryCleared = memoryResult.success;
+        
+        if (memoryCleared) {
+          console.log(`Cleared ${memoryResult.cleared_sessions} conversation sessions`);
+        }
+      } catch (error) {
+        console.warn('Failed to clear conversation memory:', error);
+      }
+      
+      // Step 3: Clear rate limiter state
+      let rateLimitsCleared = false;
+      try {
+        const rateLimitResponse = await fetch(`${API_BASE}/api/clear-rate-limits`, {
+          method: 'POST',
+        });
+        const rateLimitResult = await rateLimitResponse.json();
+        rateLimitsCleared = rateLimitResult.success;
+        
+        if (rateLimitsCleared) {
+          console.log(`Cleared rate limits for ${rateLimitResult.cleared_clients} clients`);
+        }
+      } catch (error) {
+        console.warn('Failed to clear rate limits:', error);
+      }
+      
+      // Step 4: Clear local conversation state
+      setMessages([]);
+      setCurrentMetrics({ ttft: 0, totalTime: 0, tokensUsed: 0 });
+      
+      // Generate new session ID for fresh start
+      sessionId.current = `session_${Date.now()}`;
+      
+      // Return true if document deletion was successful (main requirement)
+      // Memory and rate limit clearing are nice-to-have but not critical
+      const documentsCleared = deleteResults.every(result => result);
+      
+      if (documentsCleared && memoryCleared) {
+        console.log('✅ Complete system reset successful');
+      } else if (documentsCleared) {
+        console.log('✅ Documents cleared, memory will reset on service restart');
+      }
+      
+      return documentsCleared;
     } catch (error) {
       console.error('Clear all documents failed:', error);
       return false;

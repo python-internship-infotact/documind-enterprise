@@ -548,6 +548,18 @@ Please provide a helpful answer based ONLY on the context documents provided. In
             logger.info("Cleaned up expired conversation sessions")
         except Exception as e:
             logger.error(f"Error cleaning up sessions: {e}")
+    
+    def clear_all_conversation_memory(self):
+        """Clear all conversation memory and session history"""
+        try:
+            session_count = len(self.memory.sessions)
+            self.memory.sessions.clear()
+            self.memory.turn_counter.clear()
+            logger.info(f"Cleared all conversation memory ({session_count} sessions)")
+            return session_count
+        except Exception as e:
+            logger.error(f"Error clearing conversation memory: {e}")
+            return 0
 
 # Global RAG engine instance
 rag_engine = None
