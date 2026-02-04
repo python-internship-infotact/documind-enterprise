@@ -48,10 +48,21 @@ app = FastAPI(
 )
 
 # Configure CORS middleware for cross-origin requests
-# Note: In production, replace "*" with specific allowed origins
+# Allow specific origins for production security
+allowed_origins = [
+    "http://localhost:5173",  # Vite dev server
+    "http://localhost:8080",  # Local production build
+    "https://documind-frontend.vercel.app",  # Vercel deployment
+    "https://*.vercel.app",  # Vercel preview deployments
+]
+
+# In development, allow all origins
+if os.getenv("ENVIRONMENT") == "development":
+    allowed_origins = ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Configure appropriately for production
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

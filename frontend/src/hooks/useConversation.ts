@@ -45,7 +45,7 @@ interface Document {
 }
 
 // Backend API configuration
-const API_BASE = 'http://localhost:8000';
+const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 
 export const useConversation = () => {
   const [messages, setMessages] = useState<Message[]>([]);

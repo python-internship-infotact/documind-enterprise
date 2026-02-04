@@ -30,7 +30,7 @@ The system consists of two main components:
   - [Groq](https://console.groq.com/) (for AI chat)
   - [Pinecone](https://www.pinecone.io/) (for vector storage)
 
-### Installation
+### Local Development
 
 1. **Clone the repository:**
 
@@ -79,9 +79,27 @@ The application will be available at:
 - **Backend API**: http://localhost:8000
 - **API Documentation**: http://localhost:8000/docs
 
-### 🐳 Docker Deployment (Production)
+### 🌐 Production Deployment
 
-For production deployment with Docker:
+For production deployment to Render (backend) and Vercel (frontend):
+
+1. **Test production configuration:**
+   ```bash
+   # On Windows:
+   test-production.bat
+   
+   # On macOS/Linux:
+   ./test-production.sh
+   ```
+
+2. **Follow the deployment guide:**
+   See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed instructions on deploying to:
+   - **Backend**: Render (with `render.yaml`)
+   - **Frontend**: Vercel (with `vercel.json`)
+
+### 🐳 Docker Deployment (Local Production)
+
+For local production testing with Docker:
 
 ```bash
 chmod +x deploy.sh
