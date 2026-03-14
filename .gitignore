@@ -4,13 +4,14 @@ __pycache__/
 *$py.class
 *.so
 .Python
+
+# Python build artifacts
 build/
 develop-eggs/
 dist/
 downloads/
 eggs/
 .eggs/
-lib/
 lib64/
 parts/
 sdist/
@@ -62,15 +63,15 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# Build outputs
-dist/
-build/
-
-# Package manager lock files (keep package-lock.json but ignore others)
+# Package manager lock files
 yarn.lock
 pnpm-lock.yaml
 bun.lockb
 
+# Frontend build output
+frontend/dist/
+
 # Documentation and analysis files
 oral.txt
 *.md.backup
+explanation.md

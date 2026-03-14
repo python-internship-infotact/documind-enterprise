@@ -90,8 +90,15 @@ async def rate_limit_middleware(request: Request, call_next):
     
     return response
 
-# Initialize core application components
-pipeline = DocumentIngestionPipeline()
+# Initialize core application components lazily
+pipeline = None
+
+def get_pipeline() -> DocumentIngestionPipeline:
+    """Get or create the global pipeline instance"""
+    global pipeline
+    if pipeline is None:
+        pipeline = DocumentIngestionPipeline()
+    return pipeline
 
 @app.on_event("startup")
 async def startup_event():
@@ -194,7 +201,7 @@ async def upload_document(file: UploadFile = File(...)):
         
         try:
             # Process document through pipeline
-            result = await pipeline.process_document(temp_file_path, file.filename)
+            result = await get_pipeline().process_document(temp_file_path, file.filename)
             return result
             
         finally:
@@ -210,7 +217,7 @@ async def upload_document(file: UploadFile = File(...)):
 async def delete_document(filename: str):
     """Delete a document and all its chunks"""
     try:
-        success = pipeline.delete_document(filename)
+        success = get_pipeline().delete_document(filename)
         
         if success:
             return {"message": f"Document {filename} deleted successfully"}
@@ -225,7 +232,7 @@ async def delete_document(filename: str):
 async def search_documents(query: str, top_k: int = 5, source_filter: str = None):
     """Search documents using semantic similarity"""
     try:
-        results = pipeline.search_documents(
+        results = get_pipeline().search_documents(
             query=query,
             top_k=top_k,
             source_filter=source_filter

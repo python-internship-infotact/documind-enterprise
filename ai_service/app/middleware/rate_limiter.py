@@ -41,9 +41,9 @@ class RateLimiter:
     """
     
     def __init__(self):
-        # Store rate limit data per IP
+        # Store rate limit data per IP - start with max tokens so first request is never blocked
         self.clients: Dict[str, Dict] = defaultdict(lambda: {
-            'tokens': 0,
+            'tokens': 20,  # Start with max default tokens
             'last_refill': time.time(),
             'requests': deque(),
             'blocked_until': None
@@ -74,14 +74,17 @@ class RateLimiter:
             }
         }
         
-        # Cleanup task
+        # Cleanup task - initialized lazily when event loop is available
         self._cleanup_task = None
-        self._start_cleanup_task()
     
     def _start_cleanup_task(self):
-        """Start background cleanup task"""
+        """Start background cleanup task (must be called from within a running event loop)"""
         if self._cleanup_task is None:
-            self._cleanup_task = asyncio.create_task(self._periodic_cleanup())
+            try:
+                loop = asyncio.get_running_loop()
+                self._cleanup_task = loop.create_task(self._periodic_cleanup())
+            except RuntimeError:
+                pass  # No running event loop yet; will be started on first request
     
     async def _periodic_cleanup(self):
         """Periodically clean up old client data"""
@@ -187,6 +190,9 @@ class RateLimiter:
         Check if request should be rate limited
         Returns JSONResponse if rate limited, None if allowed
         """
+        # Start cleanup task lazily on first request (event loop is running here)
+        self._start_cleanup_task()
+
         client_ip = self._get_client_ip(request)
         endpoint_type = self._get_endpoint_type(str(request.url.path))
         limit_config = self.limits[endpoint_type]
