@@ -23,3 +23,4 @@ numpy
 scikit-learn
 aiohttp
 aiofiles
+opencv-python-headless
