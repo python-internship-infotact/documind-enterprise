@@ -9,7 +9,6 @@ A production-ready Retrieval-Augmented Generation (RAG) system for enterprise do
 - **💬 AI Chat Interface**: Real-time streaming responses with Groq LLM integration
 - **📚 Enhanced Citations**: Rich metadata with relevance scores and source information
 - **🛡️ Rate Limiting**: Token bucket algorithm for API abuse prevention
-- **🐳 Production Ready**: Complete Docker containerization with health monitoring
 - **🔒 Safety Features**: Hallucination prevention and query scope validation
 - **⚡ High Performance**: Sub-500ms response times with 30-50 tokens/second streaming
 
@@ -79,36 +78,6 @@ The application will be available at:
 - **Backend API**: http://localhost:8000
 - **API Documentation**: http://localhost:8000/docs
 
-### 🌐 Production Deployment
-
-For production deployment to Render (backend) and Vercel (frontend):
-
-1. **Test production configuration:**
-   ```bash
-   # On Windows:
-   test-production.bat
-   
-   # On macOS/Linux:
-   ./test-production.sh
-   ```
-
-2. **Follow the deployment guide:**
-   See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed instructions on deploying to:
-   - **Backend**: Render (with `render.yaml`)
-   - **Frontend**: Vercel (with `vercel.json`)
-
-### 🐳 Docker Deployment (Local Production)
-
-For local production testing with Docker:
-
-```bash
-chmod +x deploy.sh
-./deploy.sh
-```
-
-This will start all services with:
-- **Frontend**: http://localhost:8080
-- **Backend API**: http://localhost:8000
 
 ## ⚙️ Configuration
 
@@ -188,10 +157,6 @@ documind-enterprise/
 │   ├── package.json         # Node.js dependencies
 │   └── vite.config.ts       # Vite configuration
 ├── backend/                  # Alternative backend implementation
-├── docker-compose.prod.yaml  # Production Docker setup
-├── Dockerfile.backend        # Backend Docker image
-├── Dockerfile.frontend       # Frontend Docker image
-├── deploy.sh                # Deployment script
 ├── clear_documents.py       # System reset utility
 └── .env.example            # Environment variables template
 ```
@@ -203,7 +168,6 @@ documind-enterprise/
 - **Hallucination Prevention**: AI safety guards prevent false information
 - **Query Scope Validation**: Ensures responses stay within document boundaries
 - **CORS Configuration**: Proper cross-origin resource sharing setup
-- **Container Security**: Non-root users and minimal attack surface
 
 ## ⚡ Performance
 
