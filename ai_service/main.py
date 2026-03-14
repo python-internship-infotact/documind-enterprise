@@ -49,12 +49,16 @@ app = FastAPI(
 
 # Configure CORS middleware for cross-origin requests
 # Allow specific origins for production security
-allowed_origins = [
-    "http://localhost:5173",  # Vite dev server
-    "http://localhost:8080",  # Local production build
-    "https://documind-frontend.vercel.app",  # Vercel deployment
-    "https://*.vercel.app",  # Vercel preview deployments
-]
+env_allowed_origins = os.getenv("ALLOWED_ORIGINS")
+if env_allowed_origins:
+    allowed_origins = [origin.strip() for origin in env_allowed_origins.split(",")]
+else:
+    allowed_origins = [
+        "http://localhost:5173",  # Vite dev server
+        "http://localhost:8080",  # Local production build
+        "https://documind-frontend.vercel.app",  # Vercel deployment
+        "https://*.vercel.app",  # Vercel preview deployments
+    ]
 
 # In development, allow all origins
 if os.getenv("ENVIRONMENT") == "development":
